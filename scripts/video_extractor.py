@@ -12,7 +12,7 @@ from projectaria_tools.core.image import InterpolationMethod
 # ---------------------------
 # Argument Parsing
 # ---------------------------
-parser = argparse.ArgumentParser(description="Extract videos from VRS files with optional image corrections.")
+parser = argparse.ArgumentParser(description="Extract and rotate videos from VRS files with optional image corrections.")
 parser.add_argument("--undistort", type=bool, default=True, help="Apply lens undistortion to images.")
 parser.add_argument("--color_correct", type=bool, default=True, help="Apply color correction to images.")
 parser.add_argument("--devignette", type=bool, default=True, help="Apply devignetting to images.")
@@ -65,7 +65,14 @@ def process_image(provider, stream_id, frame_index, undistort, color_correct, de
         sensor_label = provider.get_label_from_stream_id(stream_id)
         src_calib = device_calib.get_camera_calib(sensor_label)
         dst_calib = calibration.get_linear_camera_calibration(512, 512, 150, sensor_label)
+        # if frame_index == 0:
+        #     debug_dir = "./debug/"
+        #     os.makedirs(debug_dir, exist_ok=True)
+        #     # Save raw before undistortion
+        #     cv2.imwrite(os.path.join(debug_dir, f"frame_raw.png"), image_array)
         image_array = calibration.distort_by_calibration(image_array, dst_calib, src_calib, InterpolationMethod.BILINEAR)
+        # if frame_index == 0:
+        #     cv2.imwrite(os.path.join(debug_dir, f"frame_undistorted.png"), image_array)
 
     return image_array
 
@@ -84,10 +91,11 @@ def extract_and_save(provider, vrs_filename, output_dir, undistort, color_correc
 
     first_frame = process_image(provider, rgb_stream_id, 0, undistort, color_correct, devignette)
     height, width = first_frame.shape[:2]
+    rotated_size = (height, width)  # 90 deg rotation swaps width and height
     fps = 30  # Estimated FPS
 
     video_path = os.path.join(output_dir, f"{os.path.basename(vrs_filename)}.mp4")
-    video_writer = cv2.VideoWriter(video_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (width, height), isColor=True)
+    video_writer = cv2.VideoWriter(video_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, rotated_size, isColor=True)
 
     thumbnails = []
     indices = [0, frame_count // 2, frame_count - 1]
@@ -95,21 +103,20 @@ def extract_and_save(provider, vrs_filename, output_dir, undistort, color_correc
     for idx in tqdm(range(frame_count), desc=f"Processing {os.path.basename(vrs_filename)}"):
         frame_array = process_image(provider, rgb_stream_id, idx, undistort, color_correct, devignette)
 
-        # Handle grayscale or color frames correctly
+        # Convert RGB to BGR if needed
         if len(frame_array.shape) == 2:
             frame_to_write = cv2.cvtColor(frame_array, cv2.COLOR_GRAY2BGR)
         else:
-            frame_to_write = cv2.cvtColor(frame_array, cv2.COLOR_RGB2BGR)  # Convert RGB to BGR for OpenCV
+            frame_to_write = cv2.cvtColor(frame_array, cv2.COLOR_RGB2BGR)
+
+        # Rotate 90 degrees clockwise before saving
+        frame_to_write = cv2.rotate(frame_to_write, cv2.ROTATE_90_CLOCKWISE)
 
         video_writer.write(frame_to_write)
 
         if idx in indices:
-            thumb_path = os.path.join(output_dir, f"thumbnail_{indices.index(idx)+1}.png")
-            if len(frame_array.shape) == 2:
-                cv2.imwrite(thumb_path, frame_array)
-            else:
-                cv2.imwrite(thumb_path, cv2.cvtColor(frame_array, cv2.COLOR_RGB2BGR))  # Convert RGB to BGR before saving
-
+            thumb_path = os.path.join(output_dir, f"thumbnail_{indices.index(idx) + 1}.png")
+            cv2.imwrite(thumb_path, frame_to_write)
             thumbnails.append(thumb_path)
 
     video_writer.release()
@@ -118,7 +125,7 @@ def extract_and_save(provider, vrs_filename, output_dir, undistort, color_correc
         "video_path": video_path,
         "frame_count": frame_count,
         "fps": fps,
-        "resolution": {"width": width, "height": height},
+        "resolution": {"width": rotated_size[0], "height": rotated_size[1]},
         "thumbnails": thumbnails,
         "undistort": undistort,
         "color_correct": color_correct,
