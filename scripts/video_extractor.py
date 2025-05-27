@@ -139,6 +139,8 @@ def extract_and_save(provider, vrs_filename, output_dir, undistort, color_correc
 # File Discovery Helper
 # ---------------------------
 def find_smallest_vrs(root_dir):
+    debug_file = "/mnt/ssd1/Dropbox/Parkinson_Proj/Codes/data/05_16_2025/recording/Try.vrs"
+    return debug_file
     vrs_files = [os.path.join(dp, f) for dp, dn, filenames in os.walk(root_dir) for f in filenames if f.endswith(".vrs")]
     if not vrs_files:
         return None

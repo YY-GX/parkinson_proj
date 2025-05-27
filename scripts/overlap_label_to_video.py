@@ -3,15 +3,15 @@ import csv
 from tqdm import tqdm
 
 # === CONFIGURATION ===
-# base_path = "/media/yygx/yygx/Dropbox/Parkinson_Proj/Codes/data/05_16_2025/recording/extracted_videos/undistort_True_colorcorrect_True_devignette_True/PD2"
-# video_path = f'{base_path}/PD2.vrs.mp4'
+base_path = "/media/yygx/yygx/Dropbox/Parkinson_Proj/Codes/data/05_16_2025/recording/extracted_videos/undistort_True_colorcorrect_True_devignette_True/PD2"
+video_path = f'{base_path}/PD2.vrs.mp4'
+csv_path = f'{base_path}/05_20_2025_yue_raw.csv'
+output_path = f'{base_path}/labeled_output.mp4'
+
+# base_path = "/media/yygx/yygx/Dropbox/Parkinson_Proj/Codes/data/05_16_2025/recording/extracted_videos/undistort_True_colorcorrect_True_devignette_True/PD2-pt2"
+# video_path = f'{base_path}/PD2-pt2.vrs.mp4'
 # csv_path = f'{base_path}/05_20_2025_yue.csv'
 # output_path = f'{base_path}/labeled_output.mp4'
-
-base_path = "/media/yygx/yygx/Dropbox/Parkinson_Proj/Codes/data/05_16_2025/recording/extracted_videos/undistort_True_colorcorrect_True_devignette_True/PD2-pt2"
-video_path = f'{base_path}/PD2-pt2.vrs.mp4'
-csv_path = f'{base_path}/05_20_2025_yue.csv'
-output_path = f'{base_path}/labeled_output.mp4'
 
 # === LOAD ANNOTATIONS ===
 annotations = []
@@ -20,6 +20,8 @@ with open(csv_path, newline='') as csvfile:
     fieldnames = first_line.split(';')
 
     reader = csv.DictReader(csvfile, delimiter=';', fieldnames=fieldnames)
+    # reader = csv.DictReader(csvfile, delimiter=',')
+
     for row in reader:
         try:
             start = float(row['#starttime']) * 1000
